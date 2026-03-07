@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function membership() {
+      return get(/databases/$(database)/documents/tenant_memberships/$(request.auth.uid));
+    }
+
+    function hasMembership() {
+      return signedIn() && membership().data != null;
+    }
+
+    function isActive() {
+      return hasMembership() && membership().data.status == 'active';
+    }
+
+    function sameTenant(tenantId) {
+      return hasMembership() && membership().data.tenantId == tenantId;
+    }
+
+    function isStaffOrAdmin(tenantId) {
+      return isActive()
+        && sameTenant(tenantId)
+        && (membership().data.role == 'admin' || membership().data.role == 'staff');
+    }
+
+    function protectedFieldsChanged() {
+      return request.resource.data.planStatus != resource.data.planStatus
+        || request.resource.data.featurePlan != resource.data.featurePlan
+        || request.resource.data.featureDaycare != resource.data.featureDaycare
+        || request.resource.data.verificationStatus != resource.data.verificationStatus
+        || request.resource.data.dealerCode != resource.data.dealerCode;
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if isStaffOrAdmin(tenantId);
+      allow update: if isStaffOrAdmin(tenantId) && !protectedFieldsChanged();
+      allow create, delete: if false;
+    }
+
+    match /tenant_memberships/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}

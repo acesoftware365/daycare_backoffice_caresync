@@ -1,0 +1,13 @@
+{
+  "projects": {},
+  "targets": {
+    "liisgo-daycare-system": {
+      "hosting": {
+        "daycarebackoffice": [
+          "daycarebackoffice"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
