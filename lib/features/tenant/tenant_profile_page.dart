@@ -67,9 +67,13 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
           children: [
             _buildProfileCard(context, profile),
             const SizedBox(height: 16),
+            _buildActionsCard(),
+            const SizedBox(height: 16),
             _ParentSection(tenantId: widget.membership.tenantId, repo: _repo),
             const SizedBox(height: 16),
             _buildChildrenSection(),
+            const SizedBox(height: 16),
+            _buildChildRequestsSection(),
             const SizedBox(height: 16),
             _buildHouseholdMembersSection(),
           ],
@@ -139,6 +143,58 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
       if (!mounted) return;
       widget.onActionHandled?.call();
     });
+  }
+
+  Widget _buildActionsCard() {
+    return StreamBuilder<List<ParentAccount>>(
+      stream: _repo.watchParents(widget.membership.tenantId),
+      builder: (context, parentSnapshot) {
+        final parents = parentSnapshot.data ?? const <ParentAccount>[];
+        return StreamBuilder<List<ChildRecord>>(
+          stream: _repo.watchChildren(widget.membership.tenantId),
+          builder: (context, childSnapshot) {
+            final children = childSnapshot.data ?? const <ChildRecord>[];
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Family Actions',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _showAddParentDialog,
+                          icon: const Icon(Icons.person_add_alt_1),
+                          label: const Text('Add Parent'),
+                        ),
+                        FilledButton.tonalIcon(
+                          onPressed: () => _showAddChildDialog(parents),
+                          icon: const Icon(Icons.child_care),
+                          label: const Text('Add Child'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () =>
+                              _showAddHouseholdMemberDialog(children),
+                          icon: const Icon(Icons.badge_outlined),
+                          label: const Text('Household Member'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildChildrenSection() {
@@ -271,6 +327,95 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
                           ),
                         ),
                       ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildChildRequestsSection() {
+    return StreamBuilder<List<ParentAccount>>(
+      stream: _repo.watchParents(widget.membership.tenantId),
+      builder: (context, parentSnapshot) {
+        final parentById = {
+          for (final parent in (parentSnapshot.data ?? const <ParentAccount>[]))
+            parent.id: parent,
+        };
+        return StreamBuilder<List<ChildRequestRecord>>(
+          stream: _repo.watchPendingChildRequests(widget.membership.tenantId),
+          builder: (context, requestSnapshot) {
+            final requests =
+                requestSnapshot.data ?? const <ChildRequestRecord>[];
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Child Requests (Pending)',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    if (requests.isEmpty)
+                      const Text('No pending child requests.')
+                    else
+                      ...requests.map((request) {
+                        final parent = parentById[request.parentId];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.request_page_outlined),
+                          title: Text(
+                            request.fullName.isEmpty ? '-' : request.fullName,
+                          ),
+                          subtitle: Text(
+                            'Parent: ${parent?.fullName ?? request.parentId}\n'
+                            'Notes: ${request.notes.isEmpty ? '-' : request.notes}',
+                          ),
+                          trailing: Wrap(
+                            spacing: 8,
+                            children: [
+                              FilledButton.tonal(
+                                onPressed: () async {
+                                  try {
+                                    await _repo.approveChildRequest(
+                                      tenantId: widget.membership.tenantId,
+                                      uid: widget.uid,
+                                      request: request,
+                                    );
+                                  } on StateError catch (e) {
+                                    if (!context.mounted) return;
+                                    _showMessage(e.message);
+                                  } catch (_) {
+                                    if (!context.mounted) return;
+                                    _showMessage('Could not approve request.');
+                                  }
+                                },
+                                child: const Text('Approve'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  try {
+                                    await _repo.rejectChildRequest(
+                                      tenantId: widget.membership.tenantId,
+                                      uid: widget.uid,
+                                      requestId: request.id,
+                                    );
+                                  } catch (_) {
+                                    if (!context.mounted) return;
+                                    _showMessage('Could not reject request.');
+                                  }
+                                },
+                                child: const Text('Reject'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
@@ -508,6 +653,10 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
                             );
                             if (!context.mounted) return;
                             Navigator.of(context).pop();
+                          } on StateError catch (e) {
+                            if (!context.mounted) return;
+                            setDialogState(() => saving = false);
+                            _showMessage(e.message);
                           } catch (_) {
                             if (!context.mounted) return;
                             setDialogState(() => saving = false);
@@ -762,7 +911,7 @@ class _ParentSection extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.person_outline),
                       title: Text(parent.fullName),
-                      subtitle: Text(parent.email),
+                      subtitle: Text(_parentSubtitle(parent)),
                       trailing: parent.authUid.trim().isEmpty
                           ? const Text('No Auth UID')
                           : const Icon(Icons.verified_user_outlined),
@@ -774,6 +923,30 @@ class _ParentSection extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _parentSubtitle(ParentAccount parent) {
+    final lines = <String>[parent.email];
+    if (parent.phone.trim().isNotEmpty) {
+      lines.add('Phone: ${parent.phone.trim()}');
+    }
+    final location = [
+      parent.addressLine1.trim(),
+      parent.city.trim(),
+      parent.state.trim(),
+      parent.zip.trim(),
+    ].where((part) => part.isNotEmpty).join(', ');
+    if (location.isNotEmpty) {
+      lines.add('Address: $location');
+    }
+    final emergency = [
+      parent.emergencyContactName.trim(),
+      parent.emergencyContactPhone.trim(),
+    ].where((part) => part.isNotEmpty).join(' / ');
+    if (emergency.isNotEmpty) {
+      lines.add('Emergency: $emergency');
+    }
+    return lines.join('\n');
   }
 }
 

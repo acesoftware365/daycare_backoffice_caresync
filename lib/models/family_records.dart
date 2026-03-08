@@ -7,6 +7,13 @@ class ParentAccount {
     required this.firstName,
     required this.lastName,
     required this.authUid,
+    required this.phone,
+    required this.addressLine1,
+    required this.city,
+    required this.state,
+    required this.zip,
+    required this.emergencyContactName,
+    required this.emergencyContactPhone,
   });
 
   final String id;
@@ -14,6 +21,13 @@ class ParentAccount {
   final String firstName;
   final String lastName;
   final String authUid;
+  final String phone;
+  final String addressLine1;
+  final String city;
+  final String state;
+  final String zip;
+  final String emergencyContactName;
+  final String emergencyContactPhone;
 
   String get fullName {
     final name = '$firstName $lastName'.trim();
@@ -28,6 +42,13 @@ class ParentAccount {
       firstName: (data['firstName'] ?? '').toString(),
       lastName: (data['lastName'] ?? '').toString(),
       authUid: (data['authUid'] ?? '').toString(),
+      phone: (data['phone'] ?? '').toString(),
+      addressLine1: (data['addressLine1'] ?? '').toString(),
+      city: (data['city'] ?? '').toString(),
+      state: (data['state'] ?? '').toString(),
+      zip: (data['zip'] ?? '').toString(),
+      emergencyContactName: (data['emergencyContactName'] ?? '').toString(),
+      emergencyContactPhone: (data['emergencyContactPhone'] ?? '').toString(),
     );
   }
 }
@@ -99,5 +120,39 @@ class HouseholdMemberRecord {
     if (value is Timestamp) return value.toDate();
     if (value is DateTime) return value;
     return null;
+  }
+}
+
+class ChildRequestRecord {
+  const ChildRequestRecord({
+    required this.id,
+    required this.parentId,
+    required this.firstName,
+    required this.lastName,
+    required this.notes,
+    required this.status,
+  });
+
+  final String id;
+  final String parentId;
+  final String firstName;
+  final String lastName;
+  final String notes;
+  final String status;
+
+  String get fullName => '$firstName $lastName'.trim();
+
+  factory ChildRequestRecord.fromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data() ?? <String, dynamic>{};
+    return ChildRequestRecord(
+      id: doc.id,
+      parentId: (data['parentId'] ?? '').toString(),
+      firstName: (data['firstName'] ?? '').toString(),
+      lastName: (data['lastName'] ?? '').toString(),
+      notes: (data['notes'] ?? '').toString(),
+      status: (data['status'] ?? 'pending').toString(),
+    );
   }
 }

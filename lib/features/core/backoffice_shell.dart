@@ -19,7 +19,7 @@ class BackofficeShell extends StatefulWidget {
 }
 
 class _BackofficeShellState extends State<BackofficeShell> {
-  static const progressVersion = '1.0.10+11';
+  static const progressVersion = '1.0.15+16';
   int _index = 0;
   TenantProfileAction? _requestedProfileAction;
   final _authService = const AuthService();

@@ -28,6 +28,13 @@ class TenantRepository {
         .collection('household_members');
   }
 
+  CollectionReference<Map<String, dynamic>> _childRequestsRef(String tenantId) {
+    return FirebaseFirestore.instance
+        .collection('tenants')
+        .doc(tenantId)
+        .collection('child_requests');
+  }
+
   Stream<TenantMembership?> watchMembership(String uid) {
     return FirebaseFirestore.instance
         .collection('tenant_memberships')
@@ -106,6 +113,15 @@ class TenantRepository {
         );
   }
 
+  Stream<List<ChildRequestRecord>> watchPendingChildRequests(String tenantId) {
+    return _childRequestsRef(tenantId)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map(ChildRequestRecord.fromDoc).toList(),
+        );
+  }
+
   Future<void> createParent({
     required String tenantId,
     required String uid,
@@ -124,6 +140,21 @@ class TenantRepository {
       'createdByUid': uid,
       'sourceApp': 'daycare_backoffice',
     });
+
+    if (authUid.trim().isNotEmpty) {
+      await FirebaseFirestore.instance
+          .collection('parent_memberships')
+          .doc(authUid)
+          .set({
+            'tenantId': tenantId,
+            'parentId': doc.id,
+            'email': email.trim().toLowerCase(),
+            'status': 'active',
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedByUid': uid,
+            'sourceApp': 'daycare_backoffice',
+          }, SetOptions(merge: true));
+    }
   }
 
   Future<void> createChild({
@@ -133,6 +164,21 @@ class TenantRepository {
     required String lastName,
     required String parentId,
   }) async {
+    final normalizedFirst = firstName.trim().toLowerCase();
+    final normalizedLast = lastName.trim().toLowerCase();
+    final existing = await _childrenRef(
+      tenantId,
+    ).where('parentId', isEqualTo: parentId).get();
+    final duplicate = existing.docs.any((doc) {
+      final data = doc.data();
+      final f = (data['firstName'] ?? '').toString().trim().toLowerCase();
+      final l = (data['lastName'] ?? '').toString().trim().toLowerCase();
+      return f == normalizedFirst && l == normalizedLast;
+    });
+    if (duplicate) {
+      throw StateError('Child already exists for this parent.');
+    }
+
     final doc = _childrenRef(tenantId).doc();
     await doc.set({
       'firstName': firstName.trim(),
@@ -168,6 +214,40 @@ class TenantRepository {
       'createdByUid': uid,
       'sourceApp': 'daycare_backoffice',
     });
+  }
+
+  Future<void> approveChildRequest({
+    required String tenantId,
+    required String uid,
+    required ChildRequestRecord request,
+  }) async {
+    await createChild(
+      tenantId: tenantId,
+      uid: uid,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      parentId: request.parentId,
+    );
+
+    await _childRequestsRef(tenantId).doc(request.id).set({
+      'status': 'approved',
+      'approvedAt': FieldValue.serverTimestamp(),
+      'approvedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> rejectChildRequest({
+    required String tenantId,
+    required String uid,
+    required String requestId,
+  }) async {
+    await _childRequestsRef(tenantId).doc(requestId).set({
+      'status': 'rejected',
+      'rejectedAt': FieldValue.serverTimestamp(),
+      'rejectedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
   }
 
   Timestamp? _asTimestamp(DateTime? value) {
