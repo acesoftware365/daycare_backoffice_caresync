@@ -19,8 +19,9 @@ class BackofficeShell extends StatefulWidget {
 }
 
 class _BackofficeShellState extends State<BackofficeShell> {
-  static const progressVersion = '1.0.8+9';
+  static const progressVersion = '1.0.10+11';
   int _index = 0;
+  TenantProfileAction? _requestedProfileAction;
   final _authService = const AuthService();
   static const _items = [
     _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, index: 0),
@@ -49,6 +50,12 @@ class _BackofficeShellState extends State<BackofficeShell> {
               currentIndex: _index,
               onNavigate: (next) => setState(() => _index = next),
               items: _items,
+              onAddParent: () =>
+                  _openProfileAction(TenantProfileAction.addParent),
+              onAddChild: () =>
+                  _openProfileAction(TenantProfileAction.addChild),
+              onAddHouseholdMember: () =>
+                  _openProfileAction(TenantProfileAction.addHouseholdMember),
             ),
             Expanded(child: body),
           ],
@@ -188,7 +195,15 @@ class _BackofficeShellState extends State<BackofficeShell> {
     }
 
     if (_index == 1) {
-      return TenantProfilePage(uid: widget.uid, membership: widget.membership);
+      return TenantProfilePage(
+        uid: widget.uid,
+        membership: widget.membership,
+        requestedAction: _requestedProfileAction,
+        onActionHandled: () {
+          if (!mounted) return;
+          setState(() => _requestedProfileAction = null);
+        },
+      );
     }
 
     if (!widget.membership.isAdmin) {
@@ -206,6 +221,13 @@ class _BackofficeShellState extends State<BackofficeShell> {
         child: Text('Staff management module placeholder (admin only).'),
       ),
     );
+  }
+
+  void _openProfileAction(TenantProfileAction action) {
+    setState(() {
+      _index = 1;
+      _requestedProfileAction = action;
+    });
   }
 }
 
@@ -289,11 +311,17 @@ class _SideBar extends StatelessWidget {
     required this.currentIndex,
     required this.items,
     required this.onNavigate,
+    required this.onAddParent,
+    required this.onAddChild,
+    required this.onAddHouseholdMember,
   });
 
   final int currentIndex;
   final List<_NavItem> items;
   final ValueChanged<int> onNavigate;
+  final VoidCallback onAddParent;
+  final VoidCallback onAddChild;
+  final VoidCallback onAddHouseholdMember;
 
   @override
   Widget build(BuildContext context) {
@@ -340,6 +368,23 @@ class _SideBar extends StatelessWidget {
               ),
             );
           }),
+          const Divider(height: 20),
+          const Text(
+            'Family Actions',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(onPressed: onAddParent, child: const Text('Add Parent')),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            onPressed: onAddChild,
+            child: const Text('Add Child'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: onAddHouseholdMember,
+            child: const Text('Household Member'),
+          ),
           const Spacer(),
           FilledButton.tonalIcon(
             onPressed: () => railFooter.openSettings(context),

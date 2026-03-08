@@ -41,6 +41,15 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    match /tenants/{tenantId}/{subCollection}/{docId} {
+      allow read, write: if isStaffOrAdmin(tenantId)
+        && (
+          subCollection == 'parents'
+          || subCollection == 'children'
+          || subCollection == 'household_members'
+        );
+    }
+
     match /tenant_memberships/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
