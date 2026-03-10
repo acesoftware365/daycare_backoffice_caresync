@@ -7,6 +7,7 @@ Daycare Backoffice
 - Version `1.0.33+34`
 - Added a `Signed Parent Documents` section so backoffice can open and print the daycare contract and each child photo permission saved by the parent
 - Parent documents now open in printable PDF preview with the written form content and stored signature
+- Parent-signed PDFs are now also persisted in Firebase Storage from the parent app under `tenants/{tenantId}/parent_forms/{parentId}/...`
 - `Today Summary` and `Latest Update` now also mirror into the child root document for faster and more reliable parent reads
 - `Parent Updates` now reloads the saved `Today Summary` tags and `Latest Update` note/photo for the selected child
 - Clarified `Parent Updates` so the selected child is explicit when saving `Today Summary` or publishing `Latest Update`
