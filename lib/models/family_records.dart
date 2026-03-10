@@ -59,12 +59,14 @@ class ChildRecord {
     required this.firstName,
     required this.lastName,
     required this.parentId,
+    required this.photoPermissionSigned,
   });
 
   final String id;
   final String firstName;
   final String lastName;
   final String parentId;
+  final bool photoPermissionSigned;
 
   String get fullName => '$firstName $lastName'.trim();
 
@@ -75,6 +77,7 @@ class ChildRecord {
       firstName: (data['firstName'] ?? '').toString(),
       lastName: (data['lastName'] ?? '').toString(),
       parentId: (data['parentId'] ?? '').toString(),
+      photoPermissionSigned: data['photoPermissionSigned'] == true,
     );
   }
 }
@@ -89,6 +92,8 @@ class HouseholdMemberRecord {
     required this.physicalExamExpiresAt,
     required this.fingerprintIssuedAt,
     required this.fingerprintExpiresAt,
+    required this.physicalExamPhotoUrl,
+    required this.fingerprintPhotoUrl,
   });
 
   final String id;
@@ -99,6 +104,8 @@ class HouseholdMemberRecord {
   final DateTime? physicalExamExpiresAt;
   final DateTime? fingerprintIssuedAt;
   final DateTime? fingerprintExpiresAt;
+  final String physicalExamPhotoUrl;
+  final String fingerprintPhotoUrl;
 
   factory HouseholdMemberRecord.fromDoc(
     DocumentSnapshot<Map<String, dynamic>> doc,
@@ -113,6 +120,8 @@ class HouseholdMemberRecord {
       physicalExamExpiresAt: _asDateTime(data['physicalExamExpiresAt']),
       fingerprintIssuedAt: _asDateTime(data['fingerprintIssuedAt']),
       fingerprintExpiresAt: _asDateTime(data['fingerprintExpiresAt']),
+      physicalExamPhotoUrl: (data['physicalExamPhotoUrl'] ?? '').toString(),
+      fingerprintPhotoUrl: (data['fingerprintPhotoUrl'] ?? '').toString(),
     );
   }
 
@@ -153,6 +162,131 @@ class ChildRequestRecord {
       lastName: (data['lastName'] ?? '').toString(),
       notes: (data['notes'] ?? '').toString(),
       status: (data['status'] ?? 'pending').toString(),
+    );
+  }
+}
+
+class PickupNotificationRecord {
+  const PickupNotificationRecord({
+    required this.id,
+    required this.parentId,
+    required this.childId,
+    required this.parentName,
+    required this.childName,
+    required this.message,
+    required this.status,
+    required this.etaMinutes,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String parentId;
+  final String childId;
+  final String parentName;
+  final String childName;
+  final String message;
+  final String status;
+  final int etaMinutes;
+  final DateTime? createdAt;
+
+  factory PickupNotificationRecord.fromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data() ?? <String, dynamic>{};
+    return PickupNotificationRecord(
+      id: doc.id,
+      parentId: (data['parentId'] ?? '').toString(),
+      childId: (data['childId'] ?? '').toString(),
+      parentName: (data['parentName'] ?? '').toString(),
+      childName: (data['childName'] ?? '').toString(),
+      message: (data['message'] ?? '').toString(),
+      status: (data['status'] ?? 'pending').toString(),
+      etaMinutes: (data['etaMinutes'] as num?)?.toInt() ?? 0,
+      createdAt: HouseholdMemberRecord._asDateTime(data['createdAt']),
+    );
+  }
+}
+
+class StaffDocumentRecord {
+  const StaffDocumentRecord({
+    required this.submittedAt,
+    required this.expiresAt,
+    required this.photoUrl,
+    required this.photoPath,
+    required this.photoName,
+  });
+
+  final DateTime? submittedAt;
+  final DateTime? expiresAt;
+  final String photoUrl;
+  final String photoPath;
+  final String photoName;
+
+  bool get hasPhoto => photoUrl.trim().isNotEmpty;
+
+  factory StaffDocumentRecord.fromMap(Map<String, dynamic>? data) {
+    final raw = data ?? const <String, dynamic>{};
+    return StaffDocumentRecord(
+      submittedAt: HouseholdMemberRecord._asDateTime(raw['submittedAt']),
+      expiresAt: HouseholdMemberRecord._asDateTime(raw['expiresAt']),
+      photoUrl: (raw['photoUrl'] ?? '').toString(),
+      photoPath: (raw['photoPath'] ?? '').toString(),
+      photoName: (raw['photoName'] ?? '').toString(),
+    );
+  }
+}
+
+class StaffMemberRecord {
+  const StaffMemberRecord({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.dateOfBirth,
+    required this.daycareLicenseRole,
+    required this.roleNotes,
+    required this.backgroundCheck,
+    required this.physical,
+    required this.drugAdministrationLicense,
+    required this.cpr,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String firstName;
+  final String lastName;
+  final DateTime? dateOfBirth;
+  final String daycareLicenseRole;
+  final String roleNotes;
+  final StaffDocumentRecord backgroundCheck;
+  final StaffDocumentRecord physical;
+  final StaffDocumentRecord drugAdministrationLicense;
+  final StaffDocumentRecord cpr;
+  final DateTime? createdAt;
+
+  String get fullName => '$firstName $lastName'.trim();
+
+  factory StaffMemberRecord.fromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data() ?? const <String, dynamic>{};
+    return StaffMemberRecord(
+      id: doc.id,
+      firstName: (data['firstName'] ?? '').toString(),
+      lastName: (data['lastName'] ?? '').toString(),
+      dateOfBirth: HouseholdMemberRecord._asDateTime(data['dateOfBirth']),
+      daycareLicenseRole: (data['daycareLicenseRole'] ?? '').toString(),
+      roleNotes: (data['roleNotes'] ?? '').toString(),
+      backgroundCheck: StaffDocumentRecord.fromMap(
+        data['backgroundCheck'] as Map<String, dynamic>?,
+      ),
+      physical: StaffDocumentRecord.fromMap(
+        data['physical'] as Map<String, dynamic>?,
+      ),
+      drugAdministrationLicense: StaffDocumentRecord.fromMap(
+        data['drugAdministrationLicense'] as Map<String, dynamic>?,
+      ),
+      cpr: StaffDocumentRecord.fromMap(data['cpr'] as Map<String, dynamic>?),
+      createdAt: HouseholdMemberRecord._asDateTime(data['createdAt']),
     );
   }
 }

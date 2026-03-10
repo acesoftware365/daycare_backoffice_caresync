@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class BackofficeTheme {
-  static const colorPrimary = Color(0xFF0D6E6E);
-  static const colorSurface = Color(0xFFF6FBFA);
-  static const colorBackground = Color(0xFFEEF5F4);
-  static const colorTextPrimary = Color(0xFF123030);
+  static const colorPrimary = Color(0xFF2B6E6A);
+  static const colorSurface = Color(0xFFFFFBF7);
+  static const colorBackground = Color(0xFFF8F1E8);
+  static const colorTextPrimary = Color(0xFF23313F);
   static const colorBorder = Color(0xFFD2E3E1);
   static const colorError = Color(0xFFC0392B);
 
@@ -78,49 +78,105 @@ class BackofficeTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: primary,
       primary: primary,
-      surface: tone.sixty,
+      surface: colorSurface,
       error: colorError,
     );
 
     return ThemeData(
+      useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: tone.sixty,
+      scaffoldBackgroundColor: colorBackground,
+      textTheme: const TextTheme(
+        headlineMedium: TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.w800,
+          color: colorTextPrimary,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: colorTextPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: colorTextPrimary,
+        ),
+        bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF54606F)),
+        bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF637285)),
+      ),
       appBarTheme: AppBarTheme(
-        backgroundColor: tone.thirty,
+        backgroundColor: colorSurface,
         foregroundColor: colorTextPrimary,
         elevation: 0,
+        centerTitle: false,
+        surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 2,
-        shadowColor: primary.withValues(alpha: 0.22),
+        color: colorSurface,
+        elevation: 0,
+        shadowColor: primary.withValues(alpha: 0.16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: primary.withValues(alpha: 0.22)),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: const Color(0xFFE7DDD2)),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          elevation: 3,
-          shadowColor: primary.withValues(alpha: 0.30),
+          elevation: 0,
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorTextPrimary,
+          side: const BorderSide(color: Color(0xFFE2D8CD)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: tone.thirty,
+        selectedColor: primary.withValues(alpha: 0.18),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: colorTextPrimary,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: tone.thirty,
+        backgroundColor: colorSurface,
         indicatorColor: primary.withValues(alpha: 0.22),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: const Color(0xFFFFFEFC),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primary.withValues(alpha: 0.22)),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE6DDD2)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primary.withValues(alpha: 0.22)),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE6DDD2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: primary, width: 1.4),
         ),
       ),
+      dividerColor: const Color(0xFFEBE3D9),
     );
   }
 

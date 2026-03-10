@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/family_records.dart';
 import '../models/tenant_membership.dart';
@@ -33,6 +36,40 @@ class TenantRepository {
         .collection('tenants')
         .doc(tenantId)
         .collection('child_requests');
+  }
+
+  CollectionReference<Map<String, dynamic>> _pickupNotificationsRef(
+    String tenantId,
+  ) {
+    return FirebaseFirestore.instance
+        .collection('tenants')
+        .doc(tenantId)
+        .collection('pickup_notifications');
+  }
+
+  CollectionReference<Map<String, dynamic>> _staffRef(String tenantId) {
+    return FirebaseFirestore.instance
+        .collection('tenants')
+        .doc(tenantId)
+        .collection('staff');
+  }
+
+  DocumentReference<Map<String, dynamic>> _latestUpdateRef(
+    String tenantId,
+    String childId,
+  ) {
+    return _childrenRef(
+      tenantId,
+    ).doc(childId).collection('latest_updates').doc('current');
+  }
+
+  DocumentReference<Map<String, dynamic>> _todaySummaryRef(
+    String tenantId,
+    String childId,
+  ) {
+    return _childrenRef(
+      tenantId,
+    ).doc(childId).collection('today_summary').doc('current');
   }
 
   Stream<TenantMembership?> watchMembership(String uid) {
@@ -103,6 +140,25 @@ class TenantRepository {
     return snapshot.docs.map(ChildRecord.fromDoc).toList();
   }
 
+  Future<Map<String, dynamic>> loadParentContractDocument({
+    required String tenantId,
+    required String parentId,
+  }) async {
+    final doc = await _parentsRef(tenantId).doc(parentId).get();
+    return doc.data() ?? const <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> loadPhotoPermissionDocument({
+    required String tenantId,
+    required String childId,
+    required String parentId,
+  }) async {
+    final doc = await _childrenRef(
+      tenantId,
+    ).doc(childId).collection('photo_permissions').doc(parentId).get();
+    return doc.data() ?? const <String, dynamic>{};
+  }
+
   Stream<List<HouseholdMemberRecord>> watchHouseholdMembers(String tenantId) {
     return _householdRef(tenantId)
         .orderBy('firstName')
@@ -120,6 +176,152 @@ class TenantRepository {
         .map(
           (snapshot) => snapshot.docs.map(ChildRequestRecord.fromDoc).toList(),
         );
+  }
+
+  Stream<List<PickupNotificationRecord>> watchPendingPickupNotifications(
+    String tenantId,
+  ) {
+    return _pickupNotificationsRef(tenantId).snapshots().map((snapshot) {
+      final items =
+          snapshot.docs
+              .map(PickupNotificationRecord.fromDoc)
+              .where((item) => item.status == 'pending')
+              .toList()
+            ..sort((a, b) {
+              final aTime = a.createdAt?.millisecondsSinceEpoch ?? 0;
+              final bTime = b.createdAt?.millisecondsSinceEpoch ?? 0;
+              return bTime.compareTo(aTime);
+            });
+      return items;
+    });
+  }
+
+  Future<void> acknowledgePickupNotification({
+    required String tenantId,
+    required String notificationId,
+    required String uid,
+  }) async {
+    await _pickupNotificationsRef(tenantId).doc(notificationId).set({
+      'status': 'received',
+      'receivedAt': FieldValue.serverTimestamp(),
+      'receivedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Stream<List<StaffMemberRecord>> watchStaffMembers(String tenantId) {
+    return _staffRef(tenantId).snapshots().map((snapshot) {
+      final items = snapshot.docs.map(StaffMemberRecord.fromDoc).toList()
+        ..sort((a, b) => a.fullName.compareTo(b.fullName));
+      return items;
+    });
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchLatestUpdate(
+    String tenantId,
+    String childId,
+  ) {
+    return _latestUpdateRef(tenantId, childId).snapshots();
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchTodaySummary(
+    String tenantId,
+    String childId,
+  ) {
+    return _todaySummaryRef(tenantId, childId).snapshots();
+  }
+
+  String newStaffId(String tenantId) => _staffRef(tenantId).doc().id;
+
+  String newHouseholdMemberId(String tenantId) =>
+      _householdRef(tenantId).doc().id;
+
+  Future<UploadedStaffPhoto> uploadStaffDocumentPhoto({
+    required String tenantId,
+    required String staffId,
+    required String documentKey,
+    required String fileName,
+    required List<int> bytes,
+    String? contentType,
+  }) async {
+    final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final path =
+        'tenants/$tenantId/staff_documents/$staffId/$documentKey/$safeName';
+    final ref = FirebaseStorage.instance.ref(path);
+    await ref.putData(
+      Uint8List.fromList(bytes),
+      SettableMetadata(contentType: contentType ?? 'image/jpeg'),
+    );
+    final url = await ref.getDownloadURL();
+    return UploadedStaffPhoto(url: url, path: path, fileName: safeName);
+  }
+
+  Future<UploadedStaffPhoto> uploadHouseholdDocumentPhoto({
+    required String tenantId,
+    required String householdMemberId,
+    required String documentKey,
+    required String fileName,
+    required List<int> bytes,
+    String? contentType,
+  }) async {
+    final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final path =
+        'tenants/$tenantId/household_documents/$householdMemberId/$documentKey/$safeName';
+    final ref = FirebaseStorage.instance.ref(path);
+    await ref.putData(
+      Uint8List.fromList(bytes),
+      SettableMetadata(contentType: contentType ?? 'image/jpeg'),
+    );
+    final url = await ref.getDownloadURL();
+    return UploadedStaffPhoto(url: url, path: path, fileName: safeName);
+  }
+
+  Future<UploadedStaffPhoto> uploadChildUpdatePhoto({
+    required String tenantId,
+    required String childId,
+    required String fileName,
+    required List<int> bytes,
+    String? contentType,
+  }) async {
+    final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final path = 'tenants/$tenantId/child_updates/$childId/$safeName';
+    final ref = FirebaseStorage.instance.ref(path);
+    await ref.putData(
+      Uint8List.fromList(bytes),
+      SettableMetadata(contentType: contentType ?? 'image/jpeg'),
+    );
+    final url = await ref.getDownloadURL();
+    return UploadedStaffPhoto(url: url, path: path, fileName: safeName);
+  }
+
+  Future<void> createStaffMember({
+    required String tenantId,
+    required String uid,
+    required String staffId,
+    required String firstName,
+    required String lastName,
+    required DateTime? dateOfBirth,
+    required String daycareLicenseRole,
+    required String roleNotes,
+    required Map<String, dynamic> backgroundCheck,
+    required Map<String, dynamic> physical,
+    required Map<String, dynamic> drugAdministrationLicense,
+    required Map<String, dynamic> cpr,
+  }) async {
+    await _staffRef(tenantId).doc(staffId).set({
+      'firstName': firstName.trim(),
+      'lastName': lastName.trim(),
+      'dateOfBirth': _asTimestamp(dateOfBirth),
+      'daycareLicenseRole': daycareLicenseRole,
+      'roleNotes': roleNotes,
+      'backgroundCheck': backgroundCheck,
+      'physical': physical,
+      'drugAdministrationLicense': drugAdministrationLicense,
+      'cpr': cpr,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    });
   }
 
   Future<void> createParent({
@@ -193,16 +395,18 @@ class TenantRepository {
   Future<void> createHouseholdMember({
     required String tenantId,
     required String uid,
+    required String householdMemberId,
     required String firstName,
     required String lastName,
-    required String childId,
+    String childId = '',
     DateTime? physicalExamIssuedAt,
     DateTime? physicalExamExpiresAt,
     DateTime? fingerprintIssuedAt,
     DateTime? fingerprintExpiresAt,
+    String physicalExamPhotoUrl = '',
+    String fingerprintPhotoUrl = '',
   }) async {
-    final doc = _householdRef(tenantId).doc();
-    await doc.set({
+    await _householdRef(tenantId).doc(householdMemberId).set({
       'firstName': firstName.trim(),
       'lastName': lastName.trim(),
       'childId': childId,
@@ -210,10 +414,76 @@ class TenantRepository {
       'physicalExamExpiresAt': _asTimestamp(physicalExamExpiresAt),
       'fingerprintIssuedAt': _asTimestamp(fingerprintIssuedAt),
       'fingerprintExpiresAt': _asTimestamp(fingerprintExpiresAt),
+      'physicalExamPhotoUrl': physicalExamPhotoUrl,
+      'fingerprintPhotoUrl': fingerprintPhotoUrl,
       'createdAt': FieldValue.serverTimestamp(),
       'createdByUid': uid,
       'sourceApp': 'daycare_backoffice',
     });
+  }
+
+  Future<void> publishLatestUpdate({
+    required String tenantId,
+    required String uid,
+    required String childId,
+    required String childName,
+    required String note,
+    required String photoUrl,
+    required String photoPath,
+    required String photoName,
+  }) async {
+    final payload = {
+      'childId': childId,
+      'childName': childName,
+      'note': note.trim(),
+      'photoUrl': photoUrl,
+      'photoPath': photoPath,
+      'photoName': photoName,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    };
+    await _latestUpdateRef(
+      tenantId,
+      childId,
+    ).set(payload, SetOptions(merge: true));
+    await _childrenRef(tenantId).doc(childId).set({
+      'latestUpdateNote': note.trim(),
+      'latestUpdatePhotoUrl': photoUrl,
+      'latestUpdatePhotoPath': photoPath,
+      'latestUpdatePhotoName': photoName,
+      'latestUpdateCreatedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> saveTodaySummary({
+    required String tenantId,
+    required String uid,
+    required String childId,
+    required List<String> tags,
+  }) async {
+    final now = DateTime.now();
+    final dateKey =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    await _todaySummaryRef(tenantId, childId).set({
+      'childId': childId,
+      'tags': tags,
+      'dateKey': dateKey,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+    await _childrenRef(tenantId).doc(childId).set({
+      'todaySummaryTags': tags,
+      'todaySummaryDateKey': dateKey,
+      'todaySummaryUpdatedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
   }
 
   Future<void> approveChildRequest({
@@ -254,4 +524,16 @@ class TenantRepository {
     if (value == null) return null;
     return Timestamp.fromDate(value);
   }
+}
+
+class UploadedStaffPhoto {
+  const UploadedStaffPhoto({
+    required this.url,
+    required this.path,
+    required this.fileName,
+  });
+
+  final String url;
+  final String path;
+  final String fileName;
 }
