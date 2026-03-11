@@ -404,18 +404,18 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
     await _showPdfPreview(
       title: '${child.fullName} Photo Permission',
       build: () => FormPdfBuilder.buildPhotoPermissionPdf(
-        parentName: parent.fullName,
-        parentEmail: parent.email,
-        parentPhone: parent.phone,
-        parentAddress: [
-          parent.addressLine1,
-          parent.city,
-          parent.state,
-          parent.zip,
-        ].where((part) => part.trim().isNotEmpty).join(', '),
+        languageCode: (payload['documentLanguage'] ?? 'en').toString(),
+        daycareName: (payload['daycareName'] ?? '').toString(),
+        daycareAddress: (payload['daycareAddress'] ?? '').toString(),
+        daycarePhone: (payload['daycarePhone'] ?? '').toString(),
         childName: child.fullName.isEmpty ? 'Child' : child.fullName,
+        childDateOfBirthText:
+            (payload['childDateOfBirthText'] ?? '-').toString(),
+        parentGuardianName: parent.fullName,
+        internalCommunicationApproved:
+            payload['internalCommunicationApproved'] == true,
+        publicWebsiteApproved: payload['publicWebsiteApproved'] == true,
         signedName: (payload['signedName'] ?? '').toString(),
-        signed: payload['consentGranted'] == true,
         signedAt: _asDateTime(payload['signedAt']),
         signaturePoints: signaturePoints,
       ),
