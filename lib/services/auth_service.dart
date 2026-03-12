@@ -17,6 +17,22 @@ class AuthService {
 
   Future<void> signOut() => FirebaseAuth.instance.signOut();
 
+  Future<void> confirmCurrentUserPassword({required String password}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email?.trim() ?? '';
+    if (user == null || email.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No authenticated user found.',
+      );
+    }
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+  }
+
   Future<String> createParentAuthUser({
     required String email,
     required String password,

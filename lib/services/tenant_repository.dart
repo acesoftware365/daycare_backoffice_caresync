@@ -128,6 +128,14 @@ class TenantRepository {
     return snapshot.docs.map(ParentAccount.fromDoc).toList();
   }
 
+  Stream<ParentAccount?> watchParent(String tenantId, String parentId) {
+    return _parentsRef(tenantId).doc(parentId).snapshots().map((doc) {
+      final data = doc.data();
+      if (data == null) return null;
+      return ParentAccount.fromDoc(doc);
+    });
+  }
+
   Stream<List<ChildRecord>> watchChildren(String tenantId) {
     return _childrenRef(tenantId)
         .orderBy('firstName')
@@ -156,6 +164,17 @@ class TenantRepository {
     final doc = await _childrenRef(
       tenantId,
     ).doc(childId).collection('photo_permissions').doc(parentId).get();
+    return doc.data() ?? const <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> loadChildEnrollmentDocument({
+    required String tenantId,
+    required String childId,
+    required String parentId,
+  }) async {
+    final doc = await _childrenRef(
+      tenantId,
+    ).doc(childId).collection('enrollment_forms').doc(parentId).get();
     return doc.data() ?? const <String, dynamic>{};
   }
 
@@ -338,6 +357,8 @@ class TenantRepository {
       'lastName': lastName.trim(),
       'email': email.trim().toLowerCase(),
       'authUid': authUid,
+      'emergencyContacts': const [],
+      'authorizedPickupContacts': const [],
       'createdAt': FieldValue.serverTimestamp(),
       'createdByUid': uid,
       'sourceApp': 'daycare_backoffice',
@@ -359,12 +380,107 @@ class TenantRepository {
     }
   }
 
+  Future<void> updateParent({
+    required String tenantId,
+    required String parentId,
+    required String uid,
+    required String firstName,
+    required String lastName,
+    required String email,
+    String phone = '',
+    String addressLine1 = '',
+    String city = '',
+    String state = '',
+    String zip = '',
+    String emergencyContactName = '',
+    String emergencyContactPhone = '',
+    List<Map<String, String>> emergencyContacts = const [],
+    List<Map<String, String>> authorizedPickupContacts = const [],
+  }) async {
+    await _parentsRef(tenantId).doc(parentId).set({
+      'firstName': firstName.trim(),
+      'lastName': lastName.trim(),
+      'email': email.trim().toLowerCase(),
+      'phone': phone.trim(),
+      'addressLine1': addressLine1.trim(),
+      'city': city.trim(),
+      'state': state.trim(),
+      'zip': zip.trim(),
+      'emergencyContactName': emergencyContactName.trim(),
+      'emergencyContactPhone': emergencyContactPhone.trim(),
+      'emergencyContacts': emergencyContacts,
+      'authorizedPickupContacts': authorizedPickupContacts,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> addAuthorizedPickupContact({
+    required String tenantId,
+    required String parentId,
+    required String uid,
+    required List<Map<String, String>> authorizedPickupContacts,
+  }) async {
+    await _parentsRef(tenantId).doc(parentId).set({
+      'authorizedPickupContacts': authorizedPickupContacts,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> saveEmergencyContacts({
+    required String tenantId,
+    required String parentId,
+    required String uid,
+    required List<Map<String, String>> emergencyContacts,
+  }) async {
+    await _parentsRef(tenantId).doc(parentId).set({
+      'emergencyContacts': emergencyContacts,
+      'emergencyContactName': emergencyContacts.isEmpty
+          ? ''
+          : emergencyContacts.first['name'] ?? '',
+      'emergencyContactPhone': emergencyContacts.isEmpty
+          ? ''
+          : emergencyContacts.first['phone'] ?? '',
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteParent({
+    required String tenantId,
+    required String parentId,
+  }) async {
+    final linkedChildren = await _childrenRef(
+      tenantId,
+    ).where('parentId', isEqualTo: parentId).limit(1).get();
+    if (linkedChildren.docs.isNotEmpty) {
+      throw StateError('Delete the linked children first.');
+    }
+
+    final parentDoc = await _parentsRef(tenantId).doc(parentId).get();
+    final authUid = (parentDoc.data()?['authUid'] ?? '').toString().trim();
+
+    await _parentsRef(tenantId).doc(parentId).delete();
+
+    if (authUid.isNotEmpty) {
+      await FirebaseFirestore.instance
+          .collection('parent_memberships')
+          .doc(authUid)
+          .delete();
+    }
+  }
+
   Future<void> createChild({
     required String tenantId,
     required String uid,
     required String firstName,
     required String lastName,
     required String parentId,
+    DateTime? dateOfBirth,
   }) async {
     final normalizedFirst = firstName.trim().toLowerCase();
     final normalizedLast = lastName.trim().toLowerCase();
@@ -382,14 +498,44 @@ class TenantRepository {
     }
 
     final doc = _childrenRef(tenantId).doc();
+    final normalizedDob = _normalizeDate(dateOfBirth);
     await doc.set({
       'firstName': firstName.trim(),
       'lastName': lastName.trim(),
       'parentId': parentId,
+      'ageYears': _ageFromDateOfBirth(normalizedDob),
+      'dateOfBirth': _asTimestamp(normalizedDob),
       'createdAt': FieldValue.serverTimestamp(),
       'createdByUid': uid,
       'sourceApp': 'daycare_backoffice',
     });
+  }
+
+  Future<void> updateChild({
+    required String tenantId,
+    required String childId,
+    required String uid,
+    required String firstName,
+    required String lastName,
+    required DateTime? dateOfBirth,
+  }) async {
+    final normalizedDob = _normalizeDate(dateOfBirth);
+    await _childrenRef(tenantId).doc(childId).set({
+      'firstName': firstName.trim(),
+      'lastName': lastName.trim(),
+      'ageYears': _ageFromDateOfBirth(normalizedDob),
+      'dateOfBirth': _asTimestamp(normalizedDob),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': uid,
+      'sourceApp': 'daycare_backoffice',
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteChild({
+    required String tenantId,
+    required String childId,
+  }) async {
+    await _childrenRef(tenantId).doc(childId).delete();
   }
 
   Future<void> createHouseholdMember({
@@ -523,6 +669,22 @@ class TenantRepository {
   Timestamp? _asTimestamp(DateTime? value) {
     if (value == null) return null;
     return Timestamp.fromDate(value);
+  }
+
+  DateTime? _normalizeDate(DateTime? value) {
+    if (value == null) return null;
+    return DateTime(value.year, value.month, value.day);
+  }
+
+  int? _ageFromDateOfBirth(DateTime? dateOfBirth) {
+    if (dateOfBirth == null) return null;
+    final now = DateTime.now();
+    var age = now.year - dateOfBirth.year;
+    final birthdayPassed =
+        now.month > dateOfBirth.month ||
+        (now.month == dateOfBirth.month && now.day >= dateOfBirth.day);
+    if (!birthdayPassed) age -= 1;
+    return age < 0 ? 0 : age;
   }
 }
 

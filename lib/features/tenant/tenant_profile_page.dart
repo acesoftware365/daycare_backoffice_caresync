@@ -1,14 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
 
-import '../../form_document_pdf.dart';
 import '../../models/family_records.dart';
 import '../../models/tenant_membership.dart';
 import '../../models/tenant_profile.dart';
@@ -79,8 +76,6 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
                 _buildProfileCard(context, profile),
                 const SizedBox(height: 16),
                 _buildChildrenSection(),
-                const SizedBox(height: 16),
-                _buildParentFormsSection(),
               ],
             ),
           ),
@@ -255,229 +250,6 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
         );
       },
     );
-  }
-
-  Widget _buildParentFormsSection() {
-    return StreamBuilder<List<ParentAccount>>(
-      stream: _repo.watchParents(widget.membership.tenantId),
-      builder: (context, parentSnapshot) {
-        final parents = parentSnapshot.data ?? const <ParentAccount>[];
-        return StreamBuilder<List<ChildRecord>>(
-          stream: _repo.watchChildren(widget.membership.tenantId),
-          builder: (context, childSnapshot) {
-            final children = childSnapshot.data ?? const <ChildRecord>[];
-            return Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Signed Parent Documents',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'View and print the daycare contract and each child photo permission signed by the parent.',
-                    ),
-                    const SizedBox(height: 12),
-                    if (parents.isEmpty)
-                      const Text('No parent records found yet.')
-                    else
-                      ...parents.map((parent) {
-                        final linkedChildren = children
-                            .where((child) => child.parentId == parent.id)
-                            .toList();
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FBFF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFFD8E2EC)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                parent.fullName,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              if (parent.email.trim().isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  parent.email,
-                                  style: const TextStyle(
-                                    color: Color(0xFF63748A),
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 10),
-                              _DocumentActionRow(
-                                title: 'Daycare Contract',
-                                subtitle:
-                                    'Parent agreement and saved signature',
-                                onView: () =>
-                                    _openContractPdfPreview(parent: parent),
-                              ),
-                              if (linkedChildren.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                ...linkedChildren.map(
-                                  (child) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: _DocumentActionRow(
-                                      title:
-                                          '${child.fullName.isEmpty ? 'Child' : child.fullName} Photo Permission',
-                                      subtitle:
-                                          'Signed photo sharing form for this child',
-                                      onView: () =>
-                                          _openPhotoPermissionPdfPreview(
-                                            parent: parent,
-                                            child: child,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _openContractPdfPreview({required ParentAccount parent}) async {
-    final payload = await _repo.loadParentContractDocument(
-      tenantId: widget.membership.tenantId,
-      parentId: parent.id,
-    );
-    final contract =
-        (payload['parentContract'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    final signaturePoints =
-        (contract['signaturePoints'] as List<dynamic>? ?? const [])
-            .map((item) => item.toString())
-            .toList();
-    await _showPdfPreview(
-      title: '${parent.fullName} Daycare Contract',
-      build: () => FormPdfBuilder.buildContractPdf(
-        parentName: parent.fullName,
-        parentEmail: parent.email,
-        parentPhone: parent.phone,
-        parentAddress: [
-          parent.addressLine1,
-          parent.city,
-          parent.state,
-          parent.zip,
-        ].where((part) => part.trim().isNotEmpty).join(', '),
-        signedName: (contract['signedName'] ?? '').toString(),
-        signed: contract['accepted'] == true,
-        signedAt: _asDateTime(contract['signedAt']),
-        signaturePoints: signaturePoints,
-      ),
-    );
-  }
-
-  Future<void> _openPhotoPermissionPdfPreview({
-    required ParentAccount parent,
-    required ChildRecord child,
-  }) async {
-    final payload = await _repo.loadPhotoPermissionDocument(
-      tenantId: widget.membership.tenantId,
-      childId: child.id,
-      parentId: parent.id,
-    );
-    final signaturePoints =
-        (payload['signaturePoints'] as List<dynamic>? ?? const [])
-            .map((item) => item.toString())
-            .toList();
-    await _showPdfPreview(
-      title: '${child.fullName} Photo Permission',
-      build: () => FormPdfBuilder.buildPhotoPermissionPdf(
-        languageCode: (payload['documentLanguage'] ?? 'en').toString(),
-        daycareName: (payload['daycareName'] ?? '').toString(),
-        daycareAddress: (payload['daycareAddress'] ?? '').toString(),
-        daycarePhone: (payload['daycarePhone'] ?? '').toString(),
-        childName: child.fullName.isEmpty ? 'Child' : child.fullName,
-        childDateOfBirthText:
-            (payload['childDateOfBirthText'] ?? '-').toString(),
-        parentGuardianName: parent.fullName,
-        internalCommunicationApproved:
-            payload['internalCommunicationApproved'] == true,
-        publicWebsiteApproved: payload['publicWebsiteApproved'] == true,
-        signedName: (payload['signedName'] ?? '').toString(),
-        signedAt: _asDateTime(payload['signedAt']),
-        signaturePoints: signaturePoints,
-      ),
-    );
-  }
-
-  Future<void> _showPdfPreview({
-    required String title,
-    required Future<List<int>> Function() build,
-  }) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          child: SizedBox(
-            width: 920,
-            height: 760,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: PdfPreview(
-                    canChangePageFormat: false,
-                    canChangeOrientation: false,
-                    allowPrinting: true,
-                    allowSharing: true,
-                    build: (format) async => Uint8List.fromList(await build()),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  DateTime? _asDateTime(dynamic value) {
-    if (value is DateTime) return value;
-    if (value is Timestamp) return value.toDate();
-    return null;
   }
 
   Future<void> _showAddParentDialog() async {
@@ -1060,59 +832,6 @@ class _TenantProfilePageState extends State<TenantProfilePage> {
         .where((w) => w.isNotEmpty)
         .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
         .join(' ');
-  }
-}
-
-class _DocumentActionRow extends StatelessWidget {
-  const _DocumentActionRow({
-    required this.title,
-    required this.subtitle,
-    required this.onView,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onView;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF3D4A59),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: Color(0xFF63748A)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          FilledButton.tonalIcon(
-            onPressed: onView,
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('View / Print'),
-          ),
-        ],
-      ),
-    );
   }
 }
 

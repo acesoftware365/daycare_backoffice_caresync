@@ -1,5 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class FamilyContactRecord {
+  const FamilyContactRecord({
+    required this.name,
+    required this.phone,
+    required this.relation,
+  });
+
+  final String name;
+  final String phone;
+  final String relation;
+
+  factory FamilyContactRecord.fromMap(Map<String, dynamic>? data) {
+    final raw = data ?? const <String, dynamic>{};
+    return FamilyContactRecord(
+      name: (raw['name'] ?? '').toString(),
+      phone: (raw['phone'] ?? '').toString(),
+      relation: (raw['relation'] ?? '').toString(),
+    );
+  }
+}
+
 class ParentAccount {
   const ParentAccount({
     required this.id,
@@ -14,6 +35,8 @@ class ParentAccount {
     required this.zip,
     required this.emergencyContactName,
     required this.emergencyContactPhone,
+    required this.emergencyContacts,
+    required this.authorizedPickupContacts,
   });
 
   final String id;
@@ -28,6 +51,8 @@ class ParentAccount {
   final String zip;
   final String emergencyContactName;
   final String emergencyContactPhone;
+  final List<FamilyContactRecord> emergencyContacts;
+  final List<FamilyContactRecord> authorizedPickupContacts;
 
   String get fullName {
     final name = '$firstName $lastName'.trim();
@@ -49,6 +74,16 @@ class ParentAccount {
       zip: (data['zip'] ?? '').toString(),
       emergencyContactName: (data['emergencyContactName'] ?? '').toString(),
       emergencyContactPhone: (data['emergencyContactPhone'] ?? '').toString(),
+      emergencyContacts:
+          ((data['emergencyContacts'] as List<dynamic>?) ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(FamilyContactRecord.fromMap)
+              .toList(),
+      authorizedPickupContacts:
+          ((data['authorizedPickupContacts'] as List<dynamic>?) ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(FamilyContactRecord.fromMap)
+              .toList(),
     );
   }
 }
@@ -59,6 +94,8 @@ class ChildRecord {
     required this.firstName,
     required this.lastName,
     required this.parentId,
+    required this.ageYears,
+    required this.dateOfBirth,
     required this.photoPermissionSigned,
   });
 
@@ -66,6 +103,8 @@ class ChildRecord {
   final String firstName;
   final String lastName;
   final String parentId;
+  final int? ageYears;
+  final DateTime? dateOfBirth;
   final bool photoPermissionSigned;
 
   String get fullName => '$firstName $lastName'.trim();
@@ -77,6 +116,8 @@ class ChildRecord {
       firstName: (data['firstName'] ?? '').toString(),
       lastName: (data['lastName'] ?? '').toString(),
       parentId: (data['parentId'] ?? '').toString(),
+      ageYears: (data['ageYears'] as num?)?.toInt(),
+      dateOfBirth: HouseholdMemberRecord._asDateTime(data['dateOfBirth']),
       photoPermissionSigned: data['photoPermissionSigned'] == true,
     );
   }

@@ -9,6 +9,7 @@ import '../../models/family_records.dart';
 import '../../models/tenant_membership.dart';
 import '../../services/auth_service.dart';
 import '../../services/tenant_repository.dart';
+import '../parents/parents_page.dart';
 import '../staff/staff_management_page.dart';
 import '../tenant/tenant_profile_page.dart';
 
@@ -27,7 +28,7 @@ class BackofficeShell extends StatefulWidget {
 }
 
 class _BackofficeShellState extends State<BackofficeShell> {
-  static const progressVersion = '1.0.33+34';
+  static const progressVersion = '1.0.46+47';
   int _index = 0;
   TenantProfileAction? _requestedProfileAction;
   final _authService = const AuthService();
@@ -43,6 +44,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
       index: 1,
     ),
     _NavItem(label: 'Staff', icon: Icons.group_outlined, index: 2),
+    _NavItem(label: 'Parents', icon: Icons.family_restroom_outlined, index: 3),
   ];
 
   @override
@@ -101,6 +103,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
             ),
           ),
         ),
+        bottomNavigationBar: const _BottomBrandBar(),
       );
     }
 
@@ -121,31 +124,37 @@ class _BackofficeShellState extends State<BackofficeShell> {
               onAddStaff: () => setState(() => _index = 2),
               onAddHouseholdMember: () =>
                   _openProfileAction(TenantProfileAction.addHouseholdMember),
-              onAddParent: () =>
-                  _openProfileAction(TenantProfileAction.addParent),
-              onAddChild: () =>
-                  _openProfileAction(TenantProfileAction.addChild),
             ),
             Expanded(child: _ContentFrame(child: body)),
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            label: 'Dashboard',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (value) => setState(() => _index = value),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                label: 'Dashboard',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.apartment_outlined),
+                label: 'Daycare Profile',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.group_outlined),
+                label: 'Staff',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.family_restroom_outlined),
+                label: 'Parents',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.apartment_outlined),
-            label: 'Daycare Profile',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.group_outlined),
-            label: 'Staff',
-          ),
+          const _BottomBrandBar(),
         ],
       ),
     );
@@ -156,6 +165,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
       title: Text(switch (_index) {
         1 => 'Daycare Profile',
         2 => 'Staff',
+        3 => 'Parents',
         _ => 'Dashboard',
       }),
       actions: [
@@ -276,7 +286,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
       );
     }
 
-    if (!widget.membership.isAdmin) {
+    if (_index == 2 && !widget.membership.isAdmin) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
@@ -285,7 +295,14 @@ class _BackofficeShellState extends State<BackofficeShell> {
       );
     }
 
-    return StaffManagementPage(uid: widget.uid, membership: widget.membership);
+    if (_index == 2) {
+      return StaffManagementPage(
+        uid: widget.uid,
+        membership: widget.membership,
+      );
+    }
+
+    return ParentsPage(uid: widget.uid, membership: widget.membership);
   }
 
   void _openProfileAction(TenantProfileAction action) {
@@ -1423,15 +1440,11 @@ class _MobileQuickActions extends StatelessWidget {
     required this.showStaff,
     required this.onAddStaff,
     required this.onAddHouseholdMember,
-    required this.onAddParent,
-    required this.onAddChild,
   });
 
   final bool showStaff;
   final VoidCallback onAddStaff;
   final VoidCallback onAddHouseholdMember;
-  final VoidCallback onAddParent;
-  final VoidCallback onAddChild;
 
   @override
   Widget build(BuildContext context) {
@@ -1475,16 +1488,6 @@ class _MobileQuickActions extends StatelessWidget {
                 label: 'Household',
                 onPressed: onAddHouseholdMember,
               ),
-              _MobileQuickActionChip(
-                icon: Icons.person_add_alt_1_outlined,
-                label: 'Add Parent',
-                onPressed: onAddParent,
-              ),
-              _MobileQuickActionChip(
-                icon: Icons.child_friendly_outlined,
-                label: 'Add Child',
-                onPressed: onAddChild,
-              ),
             ],
           ),
         ],
@@ -1514,6 +1517,24 @@ class _MobileQuickActionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         alignment: Alignment.centerLeft,
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _BottomBrandBar extends StatelessWidget {
+  const _BottomBrandBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: const BoxDecoration(color: Color(0xFFF1E7DC)),
+      child: const Text(
+        'Daycare Backoffice Version: v${_BackofficeShellState.progressVersion}',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }

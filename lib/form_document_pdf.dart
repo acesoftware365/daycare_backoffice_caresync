@@ -82,6 +82,126 @@ class FormPdfBuilder {
     return doc.save();
   }
 
+  static Future<Uint8List> buildEnrollmentFormPdf({
+    required String languageCode,
+    required String daycareName,
+    required String dateOfApplicationText,
+    required String dateOfEnrollmentText,
+    required String lastDayOfEnrollmentText,
+    required String childName,
+    required String childDateOfBirthText,
+    required String childGender,
+    required String childStreetAddress,
+    required String childCity,
+    required String childState,
+    required String childZipCode,
+    required String parent1Name,
+    required String parent1Address,
+    required String parent1City,
+    required String parent1ZipCode,
+    required String parent1HomePhone,
+    required String parent1CellPhone,
+    required String parent1EmergencyPhone,
+    required String parent1Email,
+    required String parent1Employer,
+    required String parent1EmployerWorkPhone,
+    required String parent1EmployerAddress,
+    required String parent1EmployerCity,
+    required String parent1EmployerZipCode,
+    required String parent2Name,
+    required String parent2Address,
+    required String parent2City,
+    required String parent2ZipCode,
+    required String parent2HomePhone,
+    required String parent2CellPhone,
+    required String parent2EmergencyPhone,
+    required String parent2Email,
+    required String parent2Employer,
+    required String parent2EmployerWorkPhone,
+    required String parent2EmployerAddress,
+    required String parent2EmployerCity,
+    required String parent2EmployerZipCode,
+    required String primaryLanguage,
+    required String contact1Name,
+    required String contact1Relationship,
+    required String contact1Phone,
+    required String contact2Name,
+    required String contact2Relationship,
+    required String contact2Phone,
+    required String restrictedPickupNotes,
+    required String pediatricianName,
+    required String pediatricianPhone,
+    required String preferredHospital,
+    required String allergyNotes,
+    required String medicationNotes,
+    required String signedName,
+    required DateTime? signedAt,
+    required List<String> signaturePoints,
+  }) async {
+    final doc = pw.Document();
+    doc.addPage(
+      pw.MultiPage(
+        pageTheme: _theme(),
+        build: (_) => _enrollmentTemplate(
+          daycareName: daycareName,
+          dateOfApplicationText: dateOfApplicationText,
+          dateOfEnrollmentText: dateOfEnrollmentText,
+          lastDayOfEnrollmentText: lastDayOfEnrollmentText,
+          childName: childName,
+          childDateOfBirthText: childDateOfBirthText,
+          childGender: childGender,
+          childStreetAddress: childStreetAddress,
+          childCity: childCity,
+          childState: childState,
+          childZipCode: childZipCode,
+          parent1Name: parent1Name,
+          parent1Address: parent1Address,
+          parent1City: parent1City,
+          parent1ZipCode: parent1ZipCode,
+          parent1HomePhone: parent1HomePhone,
+          parent1CellPhone: parent1CellPhone,
+          parent1EmergencyPhone: parent1EmergencyPhone,
+          parent1Email: parent1Email,
+          parent1Employer: parent1Employer,
+          parent1EmployerWorkPhone: parent1EmployerWorkPhone,
+          parent1EmployerAddress: parent1EmployerAddress,
+          parent1EmployerCity: parent1EmployerCity,
+          parent1EmployerZipCode: parent1EmployerZipCode,
+          parent2Name: parent2Name,
+          parent2Address: parent2Address,
+          parent2City: parent2City,
+          parent2ZipCode: parent2ZipCode,
+          parent2HomePhone: parent2HomePhone,
+          parent2CellPhone: parent2CellPhone,
+          parent2EmergencyPhone: parent2EmergencyPhone,
+          parent2Email: parent2Email,
+          parent2Employer: parent2Employer,
+          parent2EmployerWorkPhone: parent2EmployerWorkPhone,
+          parent2EmployerAddress: parent2EmployerAddress,
+          parent2EmployerCity: parent2EmployerCity,
+          parent2EmployerZipCode: parent2EmployerZipCode,
+          primaryLanguage: primaryLanguage,
+          contact1Name: contact1Name,
+          contact1Relationship: contact1Relationship,
+          contact1Phone: contact1Phone,
+          contact2Name: contact2Name,
+          contact2Relationship: contact2Relationship,
+          contact2Phone: contact2Phone,
+          restrictedPickupNotes: restrictedPickupNotes,
+          pediatricianName: pediatricianName,
+          pediatricianPhone: pediatricianPhone,
+          preferredHospital: preferredHospital,
+          allergyNotes: allergyNotes,
+          medicationNotes: medicationNotes,
+          signedName: signedName,
+          signedAt: signedAt,
+          signaturePoints: signaturePoints,
+        ),
+      ),
+    );
+    return doc.save();
+  }
+
   static pw.PageTheme _theme() => pw.PageTheme(
     pageFormat: PdfPageFormat.letter,
     margin: const pw.EdgeInsets.all(32),
@@ -191,35 +311,21 @@ class FormPdfBuilder {
       children: [
         pw.Text(
           isSpanish
-              ? '[INSERTE EL LOGO DE SU DAYCARE AQUÍ]'
-              : '[INSERT YOUR DAYCARE LOGO HERE]',
-          style: pw.TextStyle(
-            fontSize: 10,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfColor.fromInt(0xFF607080),
-          ),
-        ),
-        pw.SizedBox(height: 12),
-        pw.Text(
-          isSpanish
               ? 'FORMULARIO DE CONSENTIMIENTO DE FOTOS Y MEDIOS'
               : 'DAYCARE PHOTO & MEDIA CONSENT FORM',
-          style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
         ),
-        pw.SizedBox(height: 10),
-        _detail(
-          isSpanish ? 'Nombre del Daycare' : 'Daycare Name',
-          daycareName,
-        ),
+        pw.SizedBox(height: 6),
+        _detail(isSpanish ? 'Nombre del Daycare' : 'Daycare Name', daycareName),
         _detail(isSpanish ? 'Dirección' : 'Address', daycareAddress),
         _detail(isSpanish ? 'Teléfono' : 'Phone', daycarePhone),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
         _sectionHeading(
           isSpanish
               ? 'SECCIÓN 1: INFORMACIÓN DEL NIÑO(A)'
               : 'SECTION 1: CHILD INFORMATION',
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         _detail(
           isSpanish ? 'Nombre Completo del Niño(a)' : 'Child\'s Full Name',
           childName,
@@ -229,45 +335,43 @@ class FormPdfBuilder {
           childDateOfBirthText,
         ),
         _detail(
-          isSpanish
-              ? 'Nombre del Padre/Tutor'
-              : 'Parent/Guardian Name',
+          isSpanish ? 'Nombre del Padre/Tutor' : 'Parent/Guardian Name',
           parentGuardianName,
         ),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
         _sectionHeading(
           isSpanish
               ? 'SECCIÓN 2: DECLARACIÓN DE CONSENTIMIENTO'
               : 'SECTION 2: STATEMENT OF CONSENT',
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         pw.Text(
           isSpanish
-              ? 'En cumplimiento con las pautas establecidas por la Oficina de Primera Infancia de Connecticut (OEC), ${daycareName.isEmpty ? '[Nombre de tu Daycare]' : daycareName} requiere el consentimiento explícito por escrito de un padre o tutor legal para tomar y utilizar fotografías o videos de su hijo/a.'
-              : 'In compliance with the guidelines set forth by the Connecticut Office of Early Childhood (OEC), ${daycareName.isEmpty ? '[Your Daycare Name]' : daycareName} requires explicit written consent from a parent or legal guardian to take and use photographs or videos of your child.',
-          style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 3),
+              ? 'En cumplimiento con las pautas establecidas por la Oficina de Primera Infancia de Connecticut (OEC), ${daycareName.isEmpty ? 'el daycare' : daycareName} requiere el consentimiento explícito por escrito de un padre o tutor legal para tomar y utilizar fotografías o videos de su hijo/a.'
+              : 'In compliance with the guidelines set forth by the Connecticut Office of Early Childhood (OEC), ${daycareName.isEmpty ? 'the daycare' : daycareName} requires explicit written consent from a parent or legal guardian to take and use photographs or videos of your child.',
+          style: const pw.TextStyle(fontSize: 9.2, lineSpacing: 2),
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         pw.Text(
           isSpanish
               ? 'Nos encanta compartir con usted los logros y actividades diarias de su hijo/a, y también nos gusta celebrar nuestra comunidad en línea. Por favor, revise las opciones a continuación e indique sus preferencias. Puede actualizar este permiso en cualquier momento solicitando un nuevo formulario.'
               : 'We love sharing your child\'s milestones and daily activities with you, and we also like to celebrate our daycare community online. Please review the options below and indicate your preferences. You may update this consent at any time by requesting a new form.',
-          style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 3),
+          style: const pw.TextStyle(fontSize: 9.2, lineSpacing: 2),
         ),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
         _sectionHeading(
           isSpanish
               ? 'SECCIÓN 3: OPCIONES DE PERMISO'
               : 'SECTION 3: PERMISSION OPTIONS',
         ),
-        pw.SizedBox(height: 4),
+        pw.SizedBox(height: 2),
         pw.Text(
           isSpanish
               ? '(Por favor marque "SÍ" o "NO" en cada opción)'
               : '(Please check "YES" or "NO" for each item)',
-          style: const pw.TextStyle(fontSize: 10.5),
+          style: const pw.TextStyle(fontSize: 9.2),
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         _permissionOption(
           title: isSpanish
               ? '1. Comunicación Interna (Actualizaciones para los padres)'
@@ -278,7 +382,7 @@ class FormPdfBuilder {
           approved: internalCommunicationApproved,
           isSpanish: isSpanish,
         ),
-        pw.SizedBox(height: 10),
+        pw.SizedBox(height: 6),
         _permissionOption(
           title: isSpanish
               ? '2. Redes Sociales y Página Web Pública'
@@ -289,37 +393,186 @@ class FormPdfBuilder {
           approved: publicWebsiteApproved,
           isSpanish: isSpanish,
         ),
-        pw.SizedBox(height: 12),
-        _sectionHeading(isSpanish ? 'SECCIÓN 4: FIRMA' : 'SECTION 4: SIGNATURE'),
         pw.SizedBox(height: 8),
+        _sectionHeading(
+          isSpanish ? 'SECCIÓN 4: FIRMA' : 'SECTION 4: SIGNATURE',
+        ),
+        pw.SizedBox(height: 5),
         pw.Text(
           isSpanish
               ? 'Al firmar a continuación, confirmo que soy el padre o tutor legal del niño/a nombrado anteriormente y que he elegido los permisos marcados. Entiendo que este formulario se mantendrá en el archivo oficial de mi hijo/a.'
               : 'By signing below, I confirm that I am the legal parent or guardian of the child named above and that I have chosen the permissions as marked. I understand that this form will be kept on file in my child\'s official records.',
-          style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 3),
+          style: const pw.TextStyle(fontSize: 9.2, lineSpacing: 2),
         ),
-        pw.SizedBox(height: 10),
+        pw.SizedBox(height: 6),
         pw.Text(
           isSpanish ? 'Firma del Padre o Tutor:' : 'Parent/Guardian Signature:',
           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
         ),
-        pw.SizedBox(height: 6),
+        pw.SizedBox(height: 4),
         _signatureSection(signaturePoints),
-        pw.SizedBox(height: 6),
+        pw.SizedBox(height: 4),
         pw.Text(
           signedName.trim().isEmpty ? '-' : signedName,
           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
         ),
-        pw.SizedBox(height: 10),
+        pw.SizedBox(height: 6),
         _detail(isSpanish ? 'Fecha' : 'Date', _formatDate(signedAt)),
       ],
     );
   }
 
+  static List<pw.Widget> _enrollmentTemplate({
+    required String daycareName,
+    required String dateOfApplicationText,
+    required String dateOfEnrollmentText,
+    required String lastDayOfEnrollmentText,
+    required String childName,
+    required String childDateOfBirthText,
+    required String childGender,
+    required String childStreetAddress,
+    required String childCity,
+    required String childState,
+    required String childZipCode,
+    required String parent1Name,
+    required String parent1Address,
+    required String parent1City,
+    required String parent1ZipCode,
+    required String parent1HomePhone,
+    required String parent1CellPhone,
+    required String parent1EmergencyPhone,
+    required String parent1Email,
+    required String parent1Employer,
+    required String parent1EmployerWorkPhone,
+    required String parent1EmployerAddress,
+    required String parent1EmployerCity,
+    required String parent1EmployerZipCode,
+    required String parent2Name,
+    required String parent2Address,
+    required String parent2City,
+    required String parent2ZipCode,
+    required String parent2HomePhone,
+    required String parent2CellPhone,
+    required String parent2EmergencyPhone,
+    required String parent2Email,
+    required String parent2Employer,
+    required String parent2EmployerWorkPhone,
+    required String parent2EmployerAddress,
+    required String parent2EmployerCity,
+    required String parent2EmployerZipCode,
+    required String primaryLanguage,
+    required String contact1Name,
+    required String contact1Relationship,
+    required String contact1Phone,
+    required String contact2Name,
+    required String contact2Relationship,
+    required String contact2Phone,
+    required String restrictedPickupNotes,
+    required String pediatricianName,
+    required String pediatricianPhone,
+    required String preferredHospital,
+    required String allergyNotes,
+    required String medicationNotes,
+    required String signedName,
+    required DateTime? signedAt,
+    required List<String> signaturePoints,
+  }) {
+    return [
+      pw.Text(
+        'CHILD ENROLLMENT FORM',
+        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+      ),
+      pw.SizedBox(height: 6),
+      _detail('Date of Application', dateOfApplicationText),
+      _detail('Date of Enrollment', dateOfEnrollmentText),
+      _detail('Last Day of Enrollment', lastDayOfEnrollmentText),
+      pw.SizedBox(height: 12),
+      _detail(
+        'Attention Provider',
+        'This information must be kept current at all times and shall be kept file for one year after the child ceases to be enrolled in the family child care home.',
+      ),
+      pw.SizedBox(height: 8),
+      _detail('Daycare Name', daycareName),
+      pw.SizedBox(height: 10),
+      _sectionHeading('CHILD INFORMATION'),
+      pw.SizedBox(height: 6),
+      _detail('Child’s Name', childName),
+      _detail('Child’s Date of Birth', childDateOfBirthText),
+      _detail('Gender', childGender),
+      _detail('Child’s Address', childStreetAddress),
+      _detail('City', childCity),
+      _detail('State', childState),
+      _detail('Zip Code', childZipCode),
+      _detail('Primary Language Spoken at Home', primaryLanguage),
+      pw.SizedBox(height: 10),
+      _sectionHeading('PARENT / GUARDIAN INFORMATION'),
+      pw.SizedBox(height: 6),
+      _detail('Parent/Guardian Name', parent1Name),
+      _detail('Address', parent1Address),
+      _detail('City', parent1City),
+      _detail('Zip Code', parent1ZipCode),
+      _detail('Home Telephone #', parent1HomePhone),
+      _detail('Cell #', parent1CellPhone),
+      _detail('Emergency Contact #', parent1EmergencyPhone),
+      _detail('e-mail Address', parent1Email),
+      _detail('Employer', parent1Employer),
+      _detail('Work #', parent1EmployerWorkPhone),
+      _detail('Employer’s Address', parent1EmployerAddress),
+      _detail('City', parent1EmployerCity),
+      _detail('Zip Code', parent1EmployerZipCode),
+      pw.SizedBox(height: 8),
+      _detail('Parent/Guardian Name', parent2Name),
+      _detail('Address', parent2Address),
+      _detail('City', parent2City),
+      _detail('Zip Code', parent2ZipCode),
+      _detail('Home Telephone #', parent2HomePhone),
+      _detail('Cell #', parent2CellPhone),
+      _detail('Emergency Contact #', parent2EmergencyPhone),
+      _detail('e-mail Address', parent2Email),
+      _detail('Employer', parent2Employer),
+      _detail('Work #', parent2EmployerWorkPhone),
+      _detail('Employer’s Address', parent2EmployerAddress),
+      _detail('City', parent2EmployerCity),
+      _detail('Zip Code', parent2EmployerZipCode),
+      pw.SizedBox(height: 10),
+      _sectionHeading('EMERGENCY CONTACTS & AUTHORIZED PICK-UP'),
+      pw.SizedBox(height: 4),
+      pw.SizedBox(height: 6),
+      _detail('Contact 1 Name', contact1Name),
+      _detail('Relationship', contact1Relationship),
+      _detail('Phone Number', contact1Phone),
+      pw.SizedBox(height: 6),
+      _detail('Contact 2 Name', contact2Name),
+      _detail('Relationship', contact2Relationship),
+      _detail('Phone Number', contact2Phone),
+      pw.SizedBox(height: 6),
+      _detail('Not Allowed Pickup', restrictedPickupNotes),
+      pw.SizedBox(height: 10),
+      _sectionHeading('MEDICAL INFORMATION'),
+      pw.SizedBox(height: 6),
+      _detail('Pediatrician’s Name', pediatricianName),
+      _detail('Phone', pediatricianPhone),
+      _detail('Preferred Hospital', preferredHospital),
+      _detail('Allergies', allergyNotes),
+      _detail('Daily medications or chronic conditions', medicationNotes),
+      pw.SizedBox(height: 8),
+      _bodyCard(
+        'Signature of Parent or Guardian: ${signedName.trim().isEmpty ? '-' : signedName}\nDate: ${_formatDate(signedAt)}',
+      ),
+      pw.SizedBox(height: 10),
+      pw.Text(
+        'Saved Signature',
+        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      ),
+      pw.SizedBox(height: 6),
+      _signatureSection(signaturePoints),
+    ];
+  }
+
   static pw.Widget _sectionHeading(String text) {
     return pw.Text(
       text,
-      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+      style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold),
     );
   }
 
@@ -334,8 +587,8 @@ class FormPdfBuilder {
       children: [
         pw.Text(title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 4),
-        pw.Text(body, style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 3)),
-        pw.SizedBox(height: 6),
+        pw.Text(body, style: const pw.TextStyle(fontSize: 9.2, lineSpacing: 2)),
+        pw.SizedBox(height: 4),
         pw.Row(
           children: [
             _checkBox(approved),
@@ -379,9 +632,9 @@ class FormPdfBuilder {
           pw.SizedBox(height: 8),
           if (svg != null)
             pw.Container(
-              height: 160,
+              height: 76,
               width: double.infinity,
-              padding: const pw.EdgeInsets.all(10),
+              padding: const pw.EdgeInsets.all(6),
               decoration: pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFF8FBFF),
                 borderRadius: pw.BorderRadius.circular(16),
@@ -392,7 +645,7 @@ class FormPdfBuilder {
           else
             pw.Container(
               width: double.infinity,
-              padding: const pw.EdgeInsets.all(16),
+              padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFF8FBFF),
                 borderRadius: pw.BorderRadius.circular(16),
