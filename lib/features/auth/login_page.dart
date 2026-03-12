@@ -141,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
             child: const SafeArea(
               top: false,
               child: Text(
-                'Daycare Backoffice Version: v1.0.46+47',
+                'Daycare Backoffice Version: v1.0.47+48',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
